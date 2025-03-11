@@ -1,0 +1,11 @@
+certifi==2025.1.31
+charset-normalizer==3.4.1
+idna==3.10
+numpy==2.2.3
+pandas==2.2.3
+python-dateutil==2.9.0.post0
+pytz==2025.1
+requests @ git+https://github.com/psf/requests@1764cc938efc3cc9720188dfa6c3852c45211aa0
+six==1.17.0
+tzdata==2025.1
+urllib3==2.3.0
