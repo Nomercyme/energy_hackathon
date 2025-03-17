@@ -53,3 +53,29 @@ def visualize_data(df_or_series, start_date=None, end_date=None, columns=None, i
 # Example usage
 # Assuming df is your DataFrame with a DateTime index
 # visualize_data(df, start_date='2022-01-01', end_date='2022-12-31', columns=['Price', 'Volume'], is_price=True)
+    
+def null_summary(df, start_date=None):
+    # Set default start and end dates if not provided
+    if start_date is None:
+        start_date = df.index.min()
+
+    df_filtered = df.loc[start_date:]
+
+    # Calculate the absolute number of nulls for each column
+    absolute_nulls = df_filtered.isnull().sum()
+    
+    # Calculate the relative percentage of nulls for each column
+    relative_nulls = round((df_filtered.isnull().sum() / len(df_filtered)) * 100,2)
+    
+    # Create a new DataFrame with the absolute and relative null counts
+    nulls_df = pd.DataFrame({
+        'Absolute Nulls': absolute_nulls,
+        'Relative Nulls (%)': relative_nulls
+    })
+    
+    # Set the index to be the column names
+    nulls_df.index.name = 'Column'
+
+    nulls_df = nulls_df.sort_values(by='Relative Nulls (%)', ascending=False)
+    
+    return nulls_df
