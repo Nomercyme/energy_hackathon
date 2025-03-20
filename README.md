@@ -36,3 +36,13 @@ To install new Python packages to the environment, simply run:
 ```bash
 uv add PACKAGE_NAME
 ```
+
+
+## Notes
+To Add
+- Index column
+- Holidays FE
+- Clear input format for LCP to rerun my code
+Next-steps
+- Make "long" format, x6 train dataset
+- A model for each market 
