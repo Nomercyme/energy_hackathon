@@ -34,7 +34,7 @@ def create_datetime_features(df: pd.DataFrame) -> pd.DataFrame:
     
     copy_df['efa_block'] = ((((copy_df.index.hour - efa_block_start) % 24) // efa_block_duration)+1).astype(np.int8)
     
-    return copy_df
+    return copy_df[['tm_d', 'tm_w', 'tm_m', 'tm_y', 'tm_wm', 'tm_dw', 'tm_w_end', 'hour_of_day', 'halfhour_of_day', 'efa_block']]
 
 def create_lagged_features(df: pd.DataFrame, target:str, lag_days:list, drop_target:bool) -> pd.DataFrame:
     # Create a temporary DataFrame with the "id" column and the target column
@@ -46,8 +46,73 @@ def create_lagged_features(df: pd.DataFrame, target:str, lag_days:list, drop_tar
         for l in lag_days
         for col in [target]
     })
-    # Merge temporary DataFrame with the original DataFrame
+    # Drop the target column if the drop_target parameter is set to True
     if drop_target:
-        return temp_df.drop(columns=[target]).merge(df, how='left', left_index=True, right_index=True)
+        return temp_df.drop(columns=[target])
     else:
-        return temp_df.merge(df, how='left', left_index=True, right_index=True)
+        return temp_df
+
+def create_sincos_datetime_features(df: pd.DataFrame) -> pd.DataFrame:
+    # Will take features for the time of week, day, hour of day, halfhour of day and EFA block and turn them into Sinusoidal features, it will also drop the original features
+    """
+    Needs to be checked if this was done correctly, this is a good source to understand what's happening: https://developer.nvidia.com/blog/three-approaches-to-encoding-time-information-as-features-for-ml-models/
+    """
+    
+    copy_df = df.copy()
+
+    # Ensure the DataFrame index is a datetime index
+    if not isinstance(copy_df.index, pd.DatetimeIndex):
+        raise ValueError("The DataFrame index must be a DatetimeIndex.")
+    
+    # Sinusoidal features for the time of week, day, hour of day, halfhour of day and EFA block
+    max_tm_wm = copy_df['tm_wm'].max()
+    copy_df['sin_tm_wm'] = np.sin(2 * np.pi * copy_df['tm_wm'] / max_tm_wm)
+    copy_df['cos_tm_wm'] = np.cos(2 * np.pi * copy_df['tm_wm'] / max_tm_wm)
+
+    copy_df['sin_tm_dw'] = np.sin(2 * np.pi * copy_df['tm_dw'] / 6)  # 6 is highest value of tm_dw (0-6)
+    copy_df['cos_tm_dw'] = np.cos(2 * np.pi * copy_df['tm_dw'] / 6)
+
+    copy_df['sin_hour_of_day'] = np.sin(2 * np.pi * copy_df['hour_of_day'] / 23)
+    copy_df['cos_hour_of_day'] = np.cos(2 * np.pi * copy_df['hour_of_day'] / 23)
+
+    copy_df['sin_halfhour_of_day'] = np.sin(2 * np.pi * copy_df['halfhour_of_day'] / 47)
+    copy_df['cos_halfhour_of_day'] = np.cos(2 * np.pi * copy_df['halfhour_of_day'] / 47)
+
+    max_efa_block = copy_df['efa_block'].max()
+    copy_df['sin_efa_block'] = np.sin(2 * np.pi * copy_df['efa_block'] / max_efa_block)
+    copy_df['cos_efa_block'] = np.cos(2 * np.pi * copy_df['efa_block'] / max_efa_block)
+
+    return copy_df.drop(columns=['tm_wm', 'tm_dw', 'hour_of_day', 'halfhour_of_day', 'efa_block'])
+
+def create_all_lagged_features(df: pd.DataFrame) -> pd.DataFrame:
+    # Define the target columns and their respective lag days
+    targets_and_lags = {
+        'Day Ahead Price (EPEX half-hourly, local) - GB (£/MWh)': [48, 96],
+        'Ancillary Price - DC-H - GB (£/MW/h)': [48, 96, 144, 192, 240, 288, 336],
+        'Ancillary Price - DC-L - GB (£/MW/h)': [48, 96, 144, 192, 240, 288, 336],
+        'Ancillary Price - DM-H - GB (£/MW/h)': [48, 96, 144, 192, 240, 288, 336],
+        'Ancillary Price - DM-L - GB (£/MW/h)': [48, 96, 144, 192, 240, 288, 336],
+        'Ancillary Price - DR-H - GB (£/MW/h)': [48, 96, 144, 192, 240, 288, 336],
+        'Ancillary Price - DR-L - GB (£/MW/h)': [48, 96, 144, 192, 240, 288, 336],
+        'Ancillary Volume Accepted - DC-H - GB (MW)': [48, 96, 144, 192, 240, 288, 336],
+        'Ancillary Volume Accepted - DC-L - GB (MW)': [48, 96, 144, 192, 240, 288, 336],
+        'Ancillary Volume Accepted - DM-H - GB (MW)': [48, 96, 144, 192, 240, 288, 336],
+        'Ancillary Volume Accepted - DM-L - GB (MW)': [48, 96, 144, 192, 240, 288, 336],
+        'Ancillary Volume Accepted - DR-H - GB (MW)': [48, 96, 144, 192, 240, 288, 336],
+        'Ancillary Volume Accepted - DR-L - GB (MW)': [48, 96, 144, 192, 240, 288, 336],
+        'Day Ahead Price (N2EX, local) - GB (£/MWh)': [48],
+        'Day Ahead Price (EPEX, local) - GB (£/MWh)': [48]
+    }
+    
+    # Create lagged features for each target column
+    lagged_dfs = []
+    for target, lag_days in targets_and_lags.items():
+        # drop_target will be True if target column not in [day ahead hourly N2EX, day ahead hourly EPEX] 
+        drop_target = target not in ['Day Ahead Price (N2EX, local) - GB (£/MWh)', 'Day Ahead Price (EPEX, local) - GB (£/MWh)']
+        lagged_df = create_lagged_features(df, target, lag_days, drop_target)
+        lagged_dfs.append(lagged_df)
+    
+    # Concatenate all the lagged DataFrames
+    df_merged_lag = pd.concat(lagged_dfs, axis=1)
+    
+    return df_merged_lag

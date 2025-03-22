@@ -39,10 +39,13 @@ uv add PACKAGE_NAME
 
 
 ## Notes
-To Add
+### To Add
 - Index column
 - Holidays FE
 - Clear input format for LCP to rerun my code
-Next-steps
+- Model B, when aggregating don't just include summarization, but also actual halfhourly values as features, also averages of highest / lowest SPs -> Trader's logic when setting DFR prices; What's the highest / lowest export price I'm missing out on?
+- Include some data from the EFA blocks before and after -> Traders will also be thinking "How much will it cost me to charge up/down to the Response Energy Volume?"
+
+### Next-steps
 - Make "long" format, x6 train dataset
 - A model for each market 
