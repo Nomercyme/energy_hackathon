@@ -37,7 +37,7 @@ def create_datetime_features(df: pd.DataFrame) -> pd.DataFrame:
     return copy_df[['tm_d', 'tm_w', 'tm_m', 'tm_y', 'tm_wm', 'tm_dw', 'tm_w_end', 'hour_of_day', 'halfhour_of_day', 'efa_block']]
 
 def create_lagged_features(df: pd.DataFrame, target:str, lag_days:list, drop_target:bool) -> pd.DataFrame:
-    # Create a temporary DataFrame with the "id" column and the target column
+    # Create a temporary DataFrame with the target column
     temp_df = df[[target]]
     
     # Create lagged features for the target column
@@ -116,3 +116,81 @@ def create_all_lagged_features(df: pd.DataFrame) -> pd.DataFrame:
     df_merged_lag = pd.concat(lagged_dfs, axis=1)
     
     return df_merged_lag
+
+def groupby_without_aggregation(df:pd.DataFrame, grouping_features:list):
+    # Source: https://stackoverflow.com/questions/74326050/how-to-group-by-without-aggregation-and-keep-all-values-as-new-columns
+    # Check if the index is a datetime index
+    if not isinstance(df.index, pd.DatetimeIndex):
+        raise ValueError("The DataFrame index must be a DatetimeIndex.")
+    
+    copy_df = df.copy()
+
+    # Create the efa_block feature
+    efa_block_start = 23  # EFA blocks start at 23:00
+    efa_block_duration = 4  # EFA blocks last 4 hours
+    efa_blocks_per_day = 24 // efa_block_duration
+    
+    copy_df['efa_block'] = ((((copy_df.index.hour - efa_block_start) % 24) // efa_block_duration) + 1).astype(np.int8)
+    
+    # Create the efa_day feature
+    efa_day = copy_df.index.to_series().dt.date
+    efa_day[copy_df.index.hour >= 23] = (copy_df.index.to_series() + pd.Timedelta(days=1)).dt.date[copy_df.index.hour >= 23]
+    copy_df['efa_day'] = efa_day  
+
+    final = pd.DataFrame(index=pd.date_range(start=df.index.min(), end=df.index.max(), freq='4H'))
+    # Group the DataFrame by efa_block, efa_day and efa_year features and keep original data in columns 
+    for feature in grouping_features:
+        if feature not in copy_df.columns:
+            raise ValueError("The feature '{}' is not present in the DataFrame.".format(feature))
+
+        grouped_df = copy_df.groupby(['efa_day', 'efa_block']).agg({f'{feature}':list})
+        grouped_df = pd.DataFrame(grouped_df[f'{feature}'].tolist(),index=final.index).add_prefix(f'{feature}_timeslot_')
+
+        # Drop the efa_block and efa_day features
+        grouped_df = grouped_df.drop(columns=['efa_block', 'efa_day'], errors='ignore')
+
+        # Merge grouped_df with final on datetime index
+        final = final.merge(grouped_df, left_index=True, right_index=True, how='left', validate='one_to_one')
+    return final
+
+def summarize_trading_day(df: pd.DataFrame, use_previous_day: bool, agg_columns:list):
+    """
+    SUMMARIZATION OF PREVIOUS TRADING DAY DOESN'T QUITE WORK YET
+
+    only use for day ahead hourly! I.e. use_previous_day = False
+    """
+    
+    # Check if the index is a datetime index
+    if not isinstance(df.index, pd.DatetimeIndex):
+        raise ValueError("The DataFrame index must be a DatetimeIndex.")
+    
+    copy_df = df.copy()
+
+    # Add a new column "day" based on the datetime index
+    copy_df['day'] = copy_df.index.normalize()
+
+    # Adjust to the previous trading day if needed
+    if use_previous_day:
+        copy_df['day'] = copy_df['day'] - pd.Timedelta(days=1)
+        print(copy_df['day'])
+
+    # Group by the "day" column and calculate the new features
+    grouped = copy_df.groupby('day')[agg_columns].agg(['min', 'max', 'mean', 'std'])
+
+    # Flatten the MultiIndex columns
+    grouped.columns = ['_'.join(col).strip() for col in grouped.columns.values]
+
+    # Round to two figures
+    grouped = grouped.round(2)
+    
+    # Merge the new features back to the original DataFrame
+    result_df = copy_df.merge(grouped, left_index=True, right_index=True, how='left')
+
+    # Drop "day" column
+    result_df.drop(columns=["Day Ahead Price (N2EX, local) - GB (£/MWh)", "Day Ahead Price (EPEX, local) - GB (£/MWh)", "day"], inplace=True)
+
+
+    # fill na with previous values, ffill
+    result_df.fillna(method='ffill', inplace=True)
+
+    return result_df

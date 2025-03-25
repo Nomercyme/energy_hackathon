@@ -40,12 +40,16 @@ uv add PACKAGE_NAME
 
 ## Notes
 ### To Add
-- Index column
+- Index column (instead of doing everything on datetime index)
 - Holidays FE
 - Clear input format for LCP to rerun my code
-- Model B, when aggregating don't just include summarization, but also actual halfhourly values as features, also averages of highest / lowest SPs -> Trader's logic when setting DFR prices; What's the highest / lowest export price I'm missing out on?
+- Model B, when aggregating don't just include summarization, but also actual halfhourly values as features, also averages of highest / lowest SPs (settlement periods) -> Trader's logic when setting DFR prices; What's the highest / lowest export price I'm missing out on?
 - Include some data from the EFA blocks before and after -> Traders will also be thinking "How much will it cost me to charge up/down to the Response Energy Volume?"
+- Include more lags for DFR prices, now: 1 to 7D, add: 14D, 30D
 
 ### Next-steps
-- Make "long" format, x6 train dataset
-- A model for each market 
+- Make "long" (melt) format, x6 train dataset
+- Include generation mix forecasts
+- A model for each market
+- Model interconnection trips
+- Uncertainty (interval) forecasts 
