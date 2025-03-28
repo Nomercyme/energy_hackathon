@@ -84,26 +84,44 @@ def create_sincos_datetime_features(df: pd.DataFrame) -> pd.DataFrame:
 
     return copy_df.drop(columns=['tm_wm', 'tm_dw', 'hour_of_day', 'halfhour_of_day', 'efa_block'])
 
-def create_all_lagged_features(df: pd.DataFrame) -> pd.DataFrame:
+def create_all_lagged_features(df: pd.DataFrame, model:str) -> pd.DataFrame:
     # Define the target columns and their respective lag days
-    targets_and_lags = {
-        'Day Ahead Price (EPEX half-hourly, local) - GB (£/MWh)': [48, 96],
-        'Ancillary Price - DC-H - GB (£/MW/h)': [48, 96, 144, 192, 240, 288, 336],
-        'Ancillary Price - DC-L - GB (£/MW/h)': [48, 96, 144, 192, 240, 288, 336],
-        'Ancillary Price - DM-H - GB (£/MW/h)': [48, 96, 144, 192, 240, 288, 336],
-        'Ancillary Price - DM-L - GB (£/MW/h)': [48, 96, 144, 192, 240, 288, 336],
-        'Ancillary Price - DR-H - GB (£/MW/h)': [48, 96, 144, 192, 240, 288, 336],
-        'Ancillary Price - DR-L - GB (£/MW/h)': [48, 96, 144, 192, 240, 288, 336],
-        'Ancillary Volume Accepted - DC-H - GB (MW)': [48, 96, 144, 192, 240, 288, 336],
-        'Ancillary Volume Accepted - DC-L - GB (MW)': [48, 96, 144, 192, 240, 288, 336],
-        'Ancillary Volume Accepted - DM-H - GB (MW)': [48, 96, 144, 192, 240, 288, 336],
-        'Ancillary Volume Accepted - DM-L - GB (MW)': [48, 96, 144, 192, 240, 288, 336],
-        'Ancillary Volume Accepted - DR-H - GB (MW)': [48, 96, 144, 192, 240, 288, 336],
-        'Ancillary Volume Accepted - DR-L - GB (MW)': [48, 96, 144, 192, 240, 288, 336],
-        'Day Ahead Price (N2EX, local) - GB (£/MWh)': [48],
-        'Day Ahead Price (EPEX, local) - GB (£/MWh)': [48]
-    }
+    if model == 'A':
+        targets_and_lags = {
+            'Day Ahead Price (EPEX half-hourly, local) - GB (£/MWh)': [48, 96],
+            'Ancillary Price - DC-H - GB (£/MW/h)': [48, 96, 144, 192, 240, 288, 336],
+            'Ancillary Price - DC-L - GB (£/MW/h)': [48, 96, 144, 192, 240, 288, 336],
+            'Ancillary Price - DM-H - GB (£/MW/h)': [48, 96, 144, 192, 240, 288, 336],
+            'Ancillary Price - DM-L - GB (£/MW/h)': [48, 96, 144, 192, 240, 288, 336],
+            'Ancillary Price - DR-H - GB (£/MW/h)': [48, 96, 144, 192, 240, 288, 336],
+            'Ancillary Price - DR-L - GB (£/MW/h)': [48, 96, 144, 192, 240, 288, 336],
+            'Ancillary Volume Accepted - DC-H - GB (MW)': [48, 96, 144, 192, 240, 288, 336],
+            'Ancillary Volume Accepted - DC-L - GB (MW)': [48, 96, 144, 192, 240, 288, 336],
+            'Ancillary Volume Accepted - DM-H - GB (MW)': [48, 96, 144, 192, 240, 288, 336],
+            'Ancillary Volume Accepted - DM-L - GB (MW)': [48, 96, 144, 192, 240, 288, 336],
+            'Ancillary Volume Accepted - DR-H - GB (MW)': [48, 96, 144, 192, 240, 288, 336],
+            'Ancillary Volume Accepted - DR-L - GB (MW)': [48, 96, 144, 192, 240, 288, 336],
+            'Day Ahead Price (N2EX, local) - GB (£/MWh)': [48],
+            'Day Ahead Price (EPEX, local) - GB (£/MWh)': [48]
+        }
     
+    elif model == 'B':
+        timestep = 6
+        targets_and_lags = {
+            'Ancillary Price - DC-H - GB (£/MW/h)': [col for col in range(timestep,(7*timestep)+1, timestep)],
+            'Ancillary Price - DC-L - GB (£/MW/h)': [col for col in range(timestep,(7*timestep)+1, timestep)],
+            'Ancillary Price - DM-H - GB (£/MW/h)': [col for col in range(timestep,(7*timestep)+1, timestep)],
+            'Ancillary Price - DM-L - GB (£/MW/h)': [col for col in range(timestep,(7*timestep)+1, timestep)],
+            'Ancillary Price - DR-H - GB (£/MW/h)': [col for col in range(timestep,(7*timestep)+1, timestep)],
+            'Ancillary Price - DR-L - GB (£/MW/h)': [col for col in range(timestep,(7*timestep)+1, timestep)],
+            'Ancillary Volume Accepted - DC-H - GB (MW)': [col for col in range(timestep,(7*timestep)+1, timestep)],
+            'Ancillary Volume Accepted - DC-L - GB (MW)': [col for col in range(timestep,(7*timestep)+1, timestep)],
+            'Ancillary Volume Accepted - DM-H - GB (MW)': [col for col in range(timestep,(7*timestep)+1, timestep)],
+            'Ancillary Volume Accepted - DM-L - GB (MW)': [col for col in range(timestep,(7*timestep)+1, timestep)],
+            'Ancillary Volume Accepted - DR-H - GB (MW)': [col for col in range(timestep,(7*timestep)+1, timestep)],
+            'Ancillary Volume Accepted - DR-L - GB (MW)': [col for col in range(timestep,(7*timestep)+1, timestep)],
+        }
+            
     # Create lagged features for each target column
     lagged_dfs = []
     for target, lag_days in targets_and_lags.items():
@@ -194,3 +212,40 @@ def summarize_trading_day(df: pd.DataFrame, use_previous_day: bool, agg_columns:
     result_df.fillna(method='ffill', inplace=True)
 
     return result_df
+
+def remove_col_and_merge(df, model, sinus_date_df, df_lag):
+    if model == 'A':
+        columns_to_keep = [
+            'Volume Requirements Forecast - DC-H - GB (MW)',
+            'Volume Requirements Forecast - DC-L - GB (MW)',
+            'Volume Requirements Forecast - DR-H - GB (MW)',
+            'Volume Requirements Forecast - DR-L - GB (MW)',
+            'Volume Requirements Forecast - DM-H - GB (MW)',
+            'Volume Requirements Forecast - DM-L - GB (MW)',
+
+            'National Demand Forecast (NDF) - GB (MW)'
+        ]
+
+        X = pd.concat([df[columns_to_keep], sinus_date_df, df_lag], axis=1)
+
+    elif model == "B":
+        columns_to_remove = [
+            'Ancillary Volume Accepted - DC-H - GB (MW)',
+            'Ancillary Volume Accepted - DC-L - GB (MW)',
+            'Ancillary Volume Accepted - DR-H - GB (MW)',
+            'Ancillary Volume Accepted - DR-L - GB (MW)',
+            'Ancillary Volume Accepted - DM-H - GB (MW)',
+            'Ancillary Volume Accepted - DM-L - GB (MW)',
+            'Ancillary Price - DC-H - GB (£/MW/h)',
+            'Ancillary Price - DC-L - GB (£/MW/h)',
+            'Ancillary Price - DR-H - GB (£/MW/h)',
+            'Ancillary Price - DR-L - GB (£/MW/h)',
+            'Ancillary Price - DM-H - GB (£/MW/h)',
+            'Ancillary Price - DM-L - GB (£/MW/h)'
+        ]
+
+        X = pd.concat([df[[column for column in df.columns if column not in columns_to_remove]], sinus_date_df, df_lag], axis=1)
+    
+    y = df["Ancillary Price - DC-L - GB (£/MW/h)"]
+    
+    return X, y

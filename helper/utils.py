@@ -6,3 +6,9 @@ def clean_column_names(df: pd.DataFrame) -> pd.DataFrame:
     # Remove the substring "(£/MWh)" from column names
     df.columns = df.columns.str.replace('(£_MWh)', '', regex=False)
     return df
+
+def naive_predictor(df: pd.DataFrame, target:str, shift:int)-> pd.DataFrame:
+    # Shift the target column by one day to create the naive prediction
+    naive_predictions = df[target].shift(shift)
+
+    return naive_predictions
