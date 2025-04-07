@@ -1,5 +1,8 @@
 # Project Setup
 
+## Disclaimer 
+This code is a proof of concept for the dual-model approach to DFR price forecasting, created under a tight deadline. Due to time constraints, only one configuration was tested, and definitely not everything was coded according to "best practices".
+
 ## Prerequisites
 
 Make sure you have `uv` installed. If not, you can install it using the following command in the terminal:
