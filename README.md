@@ -21,7 +21,7 @@ pip install uv
 
 2. Install the dependencies:
     ```bash
-    uv install -r requirements.txt
+    uv pip install -r requirements.txt
     ```
 
 ## Running the Scripts
