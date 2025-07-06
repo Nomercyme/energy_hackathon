@@ -19,9 +19,10 @@ pip install uv
     cd energy_hackathon
     ```
 
-2. Install the dependencies:
+2. Install the dependencies and pip:
     ```bash
     uv pip install -r requirements.txt
+    uv pip install pip
     ```
 
 ## Running the Scripts
